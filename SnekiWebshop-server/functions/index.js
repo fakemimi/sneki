@@ -11,8 +11,7 @@ app.listen(3000, () => {
 
 var admin = require("firebase-admin");
 
-//var serviceAccount = require(__dirname + "/snekiwebshop-firebase-adminsdk-fbsvc-344865282e.json");
-
+var serviceAccount = require(__dirname + "/snekiwebshop-firebase-adminsdk-fbsvc-eefd9f03bb.json");
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
