@@ -36,7 +36,7 @@
                 color="red"
                 icon="delete"
                 flat
-                @click="deleteAccessory(props.row.id)"
+                @click="confirmDelete(props.row.id)"
               />
             </q-td>
           </template>
@@ -60,6 +60,22 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Potvrda brisanja -->
+    <q-dialog v-model="confirmDialog" persistent transition-show="fade" transition-hide="fade">
+      <q-card>
+        <q-card-section class="text-h6">
+          Confirm Deletion
+        </q-card-section>
+        <q-card-section>
+          Are you sure you want to delete this accessory?
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="Delete" color="red" @click="performDelete" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -76,19 +92,20 @@ export default {
     const editDialog = ref(false)
     const editAccessoryData = ref({ id: '', name: '', price: null })
 
+    const confirmDialog = ref(false)
+    const itemToDelete = ref(null)
+
     const columns = [
       { name: 'name', label: 'Name', field: 'name', align: 'left' },
       { name: 'price', label: 'Price', field: 'price', align: 'right' },
       { name: 'actions', label: 'Actions', field: 'actions', align: 'center' }
     ]
 
-    // Fetch accessories from Firestore
     const fetchAccessories = async () => {
       const querySnapshot = await getDocs(collection(db, 'accessories'))
       accessories.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     }
 
-    // Add new accessory
     const addAccessory = async () => {
       if (!newAccessory.value.name || !newAccessory.value.price) return
       await addDoc(collection(db, 'accessories'), {
@@ -99,19 +116,23 @@ export default {
       fetchAccessories()
     }
 
-    // Delete accessory
-    const deleteAccessory = async (id) => {
-      await deleteDoc(doc(db, 'accessories', id))
+    const confirmDelete = (id) => {
+      itemToDelete.value = id
+      confirmDialog.value = true
+    }
+
+    const performDelete = async () => {
+      await deleteDoc(doc(db, 'accessories', itemToDelete.value))
+      confirmDialog.value = false
+      itemToDelete.value = null
       fetchAccessories()
     }
 
-    // Edit accessory
     const editAccessory = (row) => {
       editAccessoryData.value = { ...row }
       editDialog.value = true
     }
 
-    // Update accessory
     const updateAccessory = async () => {
       const { id, name, price } = editAccessoryData.value
       await updateDoc(doc(db, 'accessories', id), { name, price: Number(price) })
@@ -126,11 +147,13 @@ export default {
       newAccessory,
       columns,
       addAccessory,
-      deleteAccessory,
+      confirmDelete,
+      performDelete,
       editAccessory,
       editDialog,
       editAccessoryData,
-      updateAccessory
+      updateAccessory,
+      confirmDialog
     }
   }
 }
