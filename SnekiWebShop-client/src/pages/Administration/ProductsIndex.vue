@@ -37,7 +37,7 @@
                 color="red"
                 icon="delete"
                 flat
-                @click="deleteProduct(props.row.id)"
+                @click="confirmDelete(props.row.id)"
               />
             </q-td>
           </template>
@@ -45,7 +45,7 @@
       </q-card-section>
     </q-card>
 
-    <!-- Edit Dialog -->
+    <!-- Edit dialog -->
     <q-dialog v-model="editDialog">
       <q-card>
         <q-card-section>
@@ -59,6 +59,22 @@
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
           <q-btn flat label="Save" color="primary" @click="updateProduct" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Potvrda brisanja -->
+    <q-dialog v-model="confirmDialog" persistent transition-show="fade" transition-hide="fade">
+      <q-card>
+        <q-card-section class="text-h6">
+          Confirm Deletion
+        </q-card-section>
+        <q-card-section>
+          Are you sure you want to delete this product?
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="Delete" color="red" @click="performDelete" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -78,6 +94,9 @@ export default {
     const editDialog = ref(false)
     const editProductData = ref({ id: '', name: '', price: null, description: '' })
 
+    const confirmDialog = ref(false)
+    const itemToDelete = ref(null)
+
     const columns = [
       { name: 'name', label: 'Name', field: 'name', align: 'left' },
       { name: 'price', label: 'Price', field: 'price', align: 'right' },
@@ -85,13 +104,11 @@ export default {
       { name: 'actions', label: 'Actions', field: 'actions', align: 'center' }
     ]
 
-    // Fetch products from Firestore
     const fetchProducts = async () => {
       const querySnapshot = await getDocs(collection(db, 'products'))
       products.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     }
 
-    // Add new product
     const addProduct = async () => {
       if (!newProduct.value.name || !newProduct.value.price) return
       await addDoc(collection(db, 'products'), {
@@ -103,19 +120,23 @@ export default {
       fetchProducts()
     }
 
-    // Delete product
-    const deleteProduct = async (id) => {
-      await deleteDoc(doc(db, 'products', id))
+    const confirmDelete = (id) => {
+      itemToDelete.value = id
+      confirmDialog.value = true
+    }
+
+    const performDelete = async () => {
+      await deleteDoc(doc(db, 'products', itemToDelete.value))
+      confirmDialog.value = false
+      itemToDelete.value = null
       fetchProducts()
     }
 
-    // Edit product
     const editProduct = (row) => {
       editProductData.value = { ...row }
       editDialog.value = true
     }
 
-    // Update product
     const updateProduct = async () => {
       const { id, name, price, description } = editProductData.value
       await updateDoc(doc(db, 'products', id), {
@@ -134,11 +155,13 @@ export default {
       newProduct,
       columns,
       addProduct,
-      deleteProduct,
+      confirmDelete,
+      performDelete,
       editProduct,
       editDialog,
       editProductData,
-      updateProduct
+      updateProduct,
+      confirmDialog
     }
   }
 }
